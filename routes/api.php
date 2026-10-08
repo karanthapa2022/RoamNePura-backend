@@ -4,13 +4,16 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\AdminAuthController;
 use App\Http\Controllers\DestinationController;
+use App\Http\Controllers\InquiryController;
 
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
 
 Route::post('/bookings', [BookingController::class, 'store']);
 
 Route::get('/destinations', [DestinationController::class, 'index']);
-Route::get('/destinations/{id}', [DestinationController::class, 'show']);
+Route::get('/destinations/{slug}', [DestinationController::class, 'show']);
+Route::post('/inquiries', [InquiryController::class, 'store']);
+
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
 
@@ -18,7 +21,10 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/destinations/{id}', [DestinationController::class, 'adminShow']);
     Route::post('/destinations', [DestinationController::class, 'store']);
     Route::put('/destinations/{id}', [DestinationController::class, 'update']);
+    Route::patch('/destinations/{id}/toggle-publish', [DestinationController::class, 'togglePublish']);
     Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
+    Route::get('/inquiries', [InquiryController::class, 'adminIndex']);
+    
 
 
     Route::middleware(['auth:sanctum', 'admin'])->post(

@@ -60,9 +60,9 @@ public function adminShow(string $id)
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(string $slug)
 {
-    $destination = Destination::where('id', $id)
+    $destination = Destination::where('slug', $slug)
         ->where('is_published', true)
         ->firstOrFail();
 
@@ -101,17 +101,33 @@ $destination->update($validated);
 return response()->json($destination);
 }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+public function togglePublish(string $id)
+{
+    $destination = Destination::findOrFail($id);
+
+    $destination->update([
+        'is_published' => !$destination->is_published,
+    ]);
+
+    return response()->json([
+        'message' => $destination->is_published
+            ? 'Destination published successfully.'
+            : 'Destination unpublished successfully.',
+        'destination' => $destination,
+    ]);
+}
+
     public function destroy(string $id)
 {
     $destination = Destination::findOrFail($id);
+
+    if ($destination->image) {
+        Storage::disk('public')->delete($destination->image);
+    }
 
     $destination->delete();
 
     return response()->json([
         'message' => 'Destination deleted successfully.'
     ]);
-}
-}
+}}
