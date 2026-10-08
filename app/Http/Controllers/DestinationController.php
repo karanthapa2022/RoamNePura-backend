@@ -18,6 +18,20 @@ class DestinationController extends Controller
     return response()->json($destinations);
 }
 
+public function adminIndex()
+{
+    $destinations = Destination::latest()->get();
+
+    return response()->json($destinations);
+}
+
+public function adminShow(string $id)
+{
+    $destination = Destination::findOrFail($id);
+
+    return response()->json($destination);
+}
+
     /**
      * Store a newly created resource in storage.
      */
@@ -66,7 +80,7 @@ class DestinationController extends Controller
         'name' => 'sometimes|required|string|max:255',
         'slug' => 'sometimes|required|string|max:255|unique:destinations,slug,' . $id,
         'description' => 'sometimes|required|string',
-        'image' => 'nullable|string',
+        'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         'location' => 'nullable|string|max:255',
         'best_time' => 'nullable|string|max:255',
         'duration' => 'nullable|string|max:255',
@@ -74,9 +88,17 @@ class DestinationController extends Controller
         'is_published' => 'boolean',
     ]);
 
-    $destination->update($validated);
+    if ($request->hasFile('image')) {
+    if ($destination->image) {
+        Storage::disk('public')->delete($destination->image);
+    }
 
-    return response()->json($destination);
+    $validated['image'] = $request->file('image')->store('destinations', 'public');
+}
+
+$destination->update($validated);
+
+return response()->json($destination);
 }
 
     /**
