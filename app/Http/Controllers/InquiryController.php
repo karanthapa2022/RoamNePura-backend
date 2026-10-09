@@ -33,4 +33,20 @@ class InquiryController extends Controller
 
         return response()->json($inquiries);
     }
+
+public function updateStatus(Request $request, Inquiry $inquiry)
+{
+    $validated = $request->validate([
+        'status' => 'required|in:new,read,replied',
+    ]);
+
+    $inquiry->update([
+        'status' => $validated['status'],
+    ]);
+
+    return response()->json([
+        'message' => 'Inquiry status updated successfully.',
+        'inquiry' => $inquiry->load('destination'),
+    ]);
+}
 }
