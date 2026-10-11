@@ -25,16 +25,12 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::delete('/destinations/{id}', [DestinationController::class, 'destroy']);
     Route::get('/inquiries', [InquiryController::class, 'adminIndex']);
     Route::patch('/inquiries/{inquiry}/status', [InquiryController::class, 'updateStatus']);
-    
 
 
 
-    Route::middleware(['auth:sanctum', 'admin'])->post(
-    '/logout',
-    [AdminAuthController::class, 'logout']);
 
-Route::middleware(['auth:sanctum', 'admin'])->get(
-    '/me',
-    [AdminAuthController::class, 'me']);
+    Route::post('/logout',[AdminAuthController::class, 'logout']);
+
+    Route::get('/me',[AdminAuthController::class, 'me']);
 
 });
