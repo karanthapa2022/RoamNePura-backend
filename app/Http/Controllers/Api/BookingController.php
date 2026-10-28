@@ -8,30 +8,32 @@ use Illuminate\Http\Request;
 
 class BookingController extends Controller
 {
+    // Create a public booking.
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'phone' => 'required|string|max:20',
-            'tour' => 'required|string|max:255',
-            'travel_date' => 'required|date',
-            'travelers' => 'required|integer|min:1',
-            'message' => 'nullable|string',
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:255'],
+            'tour' => ['required', 'string', 'max:255'],
+            'travel_date' => ['required', 'date'],
+            'travelers' => ['required', 'integer', 'min:1'],
+            'message' => ['nullable', 'string'],
         ]);
 
-        $booking = Booking::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'tour' => $request->tour,
-            'travel_date' => $request->travel_date,
-            'travelers' => $request->travelers,
-            'message' => $request->message,
-        ]);
+        $booking = Booking::create($validated);
+
         return response()->json([
-            'message'=>'Booking submitted successfully!',
-            'booking'=> $booking,
+            'message' => 'Booking submitted successfully.',
+            'booking' => $booking,
         ], 201);
+    }
+
+    // List bookings for the admin panel.
+    public function adminIndex()
+    {
+        $bookings = Booking::latest()->get();
+
+        return response()->json($bookings);
     }
 }
