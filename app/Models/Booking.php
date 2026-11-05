@@ -14,5 +14,6 @@ class Booking extends Model
         'travel_date',
         'travelers',
         'message',
+        'status',
     ];
 }

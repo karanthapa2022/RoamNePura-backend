@@ -21,6 +21,7 @@ class BookingController extends Controller
             'message' => ['nullable', 'string'],
         ]);
 
+        // Status defaults to pending in the database.
         $booking = Booking::create($validated);
 
         return response()->json([
@@ -35,5 +36,22 @@ class BookingController extends Controller
         $bookings = Booking::latest()->get();
 
         return response()->json($bookings);
+    }
+
+    // Update booking status from the admin panel.
+    public function updateStatus(Request $request, Booking $booking)
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'in:pending,confirmed,cancelled'],
+        ]);
+
+        $booking->update([
+            'status' => $validated['status'],
+        ]);
+
+        return response()->json([
+            'message' => 'Booking status updated successfully.',
+            'booking' => $booking->fresh(),
+        ]);
     }
 }

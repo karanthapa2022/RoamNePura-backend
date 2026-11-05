@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Validation\Rule;
 
 class AdminAuthController extends Controller
 {
@@ -57,6 +58,55 @@ public function me(Request $request)
             'id' => $request->user()->id,
             'name' => $request->user()->name,
             'email' => $request->user()->email,
+        ],
+    ]);
+}
+
+public function changePassword(Request $request)
+{
+    $validated = $request->validate([
+        'current_password' => ['required', 'string'],
+        'password' => ['required', 'string', 'min:8', 'confirmed', 'different:current_password'],
+    ]);
+
+    $user = $request->user();
+
+    if (!Hash::check($validated['current_password'], $user->password)) {
+        return response()->json([
+            'message' => 'Your current password is incorrect.',
+        ], 422);
+    }
+
+    $user->update([
+        'password' => Hash::make($validated['password']),
+    ]);
+
+    return response()->json([
+        'message' => 'Your password has been changed successfully.',
+    ]);
+}
+public function updateProfile(Request $request)
+{
+    $user = $request->user();
+
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:255'],
+        'email' => [
+            'required',
+            'email',
+            'max:255',
+            Rule::unique('users', 'email')->ignore($user->id),
+        ],
+    ]);
+
+    $user->update($validated);
+
+    return response()->json([
+        'message' => 'Admin profile updated successfully.',
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
         ],
     ]);
 }
