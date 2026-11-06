@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use Illuminate\Http\Request;
+use App\Models\User;
+use App\Notifications\AdminActivityNotification;
 
 class BookingController extends Controller
 {
@@ -23,6 +25,15 @@ class BookingController extends Controller
 
         // Status defaults to pending in the database.
         $booking = Booking::create($validated);
+        User::where('is_admin', true)->each(function ($admin) use ($booking) {
+    $admin->notify(new AdminActivityNotification([
+        'type' => 'booking',
+        'title' => 'New Booking',
+        'message' => $booking->name . ' submitted a booking for ' . $booking->tour,
+        'booking_id' => $booking->id,
+        'url' => '/admin/bookings',
+    ]));
+});
 
         return response()->json([
             'message' => 'Booking submitted successfully.',

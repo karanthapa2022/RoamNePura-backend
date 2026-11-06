@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Inquiry;
 use Illuminate\Http\Request;
+use App\Models\User;
+use App\Notifications\AdminActivityNotification;
 
 class InquiryController extends Controller
 {
@@ -18,6 +20,15 @@ class InquiryController extends Controller
         ]);
 
         $inquiry = Inquiry::create($validated);
+        User::where('is_admin', true)->each(function ($admin) use ($inquiry) {
+    $admin->notify(new AdminActivityNotification([
+        'type' => 'inquiry',
+        'title' => 'New Inquiry',
+        'message' => $inquiry->name . ' submitted a new inquiry.',
+        'inquiry_id' => $inquiry->id,
+        'url' => '/admin/inquiries',
+    ]));
+});
 
         return response()->json([
             'message' => 'Your inquiry has been submitted successfully.',

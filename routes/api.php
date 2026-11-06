@@ -9,9 +9,11 @@ use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\Api\SiteSettingController;
+use App\Http\Controllers\Api\AdminNotificationController;
 
 // Admin login
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
+
 
 // Public booking
 Route::post('/bookings', [BookingController::class, 'store']);
@@ -34,11 +36,14 @@ Route::post('/reviews', [ReviewController::class, 'store']);
 Route::get('/site-settings', [SiteSettingController::class, 'show']);
 
 // Protected admin routes
-Route::middleware(['auth:sanctum', 'admin'])
-    ->prefix('admin')
-    ->group(function () {
+Route::middleware([
+    'auth:sanctum',
+    'admin',
+    'admin.inactivity',
+])->prefix('admin')->group(function () {
 
     Route::put('/site-settings', [SiteSettingController::class, 'update']);
+    Route::post('/activity', [AdminAuthController::class, 'updateActivity']);
 
         // Destinations management
         Route::get('/destinations', [DestinationController::class, 'adminIndex']);
@@ -59,6 +64,12 @@ Route::middleware(['auth:sanctum', 'admin'])
         // Inquiries management
         Route::get('/inquiries', [InquiryController::class, 'adminIndex']);
         Route::patch('/inquiries/{inquiry}/status', [InquiryController::class, 'updateStatus']);
+
+
+        // Admin notifications
+Route::get('/notifications', [AdminNotificationController::class, 'index']);
+Route::patch('/notifications/read-all', [AdminNotificationController::class, 'markAllAsRead']);
+Route::patch('/notifications/{id}/read', [AdminNotificationController::class, 'markAsRead']);
 
 
         // Bookings management

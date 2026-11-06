@@ -31,7 +31,13 @@ class AdminAuthController extends Controller
             ], 403);
         }
 
-        $token = $user->createToken('admin-token')->plainTextToken;
+        $newToken = $user->createToken('admin-token');
+
+$newToken->accessToken->forceFill([
+    'last_activity_at' => now(),
+])->save();
+
+$token = $newToken->plainTextToken;
 
         return response()->json([
             'message' => 'Admin login successful.',
@@ -110,4 +116,18 @@ public function updateProfile(Request $request)
         ],
     ]);
 }
+
+public function updateActivity(Request $request)
+{
+    $token = $request->user()->currentAccessToken();
+
+    $token->forceFill([
+        'last_activity_at' => now(),
+    ])->save();
+
+    return response()->json([
+        'message' => 'Admin activity updated.',
+    ]);
 }
+}
+
