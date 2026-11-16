@@ -7,20 +7,51 @@ use Illuminate\Http\Request;
 
 class AdminNotificationController extends Controller
 {
-    // Get recent notifications and unread count.
-    public function index(Request $request)
-    {
-        $user = $request->user();
+    // Get paginated notifications and unread count.
 
-        return response()->json([
-            'notifications' => $user->notifications()
-                ->latest()
-                ->take(20)
-                ->get(),
+public function index(Request $request)
+{
+    $validated = $request->validate([
+        'type' => ['nullable', 'in:booking,inquiry'],
+        'status' => ['nullable', 'in:read,unread'],
+        'page' => ['nullable', 'integer', 'min:1'],
+    ]);
 
-            'unread_count' => $user->unreadNotifications()->count(),
-        ]);
+    $user = $request->user();
+
+    $query = $user->notifications()->latest();
+
+    // Filter by notification type.
+    if (!empty($validated['type'])) {
+        $query->where('data->type', $validated['type']);
     }
+
+    // Filter by read/unread status.
+    if (($validated['status'] ?? null) === 'read') {
+        $query->whereNotNull('read_at');
+    } elseif (($validated['status'] ?? null) === 'unread') {
+        $query->whereNull('read_at');
+    }
+
+    $notifications = $query->paginate(10);
+
+    return response()->json([
+        'notifications' => $notifications->items(),
+
+        'pagination' => [
+            'current_page' => $notifications->currentPage(),
+            'last_page' => $notifications->lastPage(),
+            'per_page' => $notifications->perPage(),
+            'total' => $notifications->total(),
+            'from' => $notifications->firstItem(),
+            'to' => $notifications->lastItem(),
+        ],
+
+        // Always show the total unread count, regardless of active filters.
+        'unread_count' => $user->unreadNotifications()->count(),
+    ]);
+}
+
 
     // Mark one notification as read.
     public function markAsRead(Request $request, string $id)
