@@ -9,30 +9,38 @@ use Illuminate\Support\Facades\Storage;
 
 class TourController extends Controller
 {
-    // Public: published tours
+    // Public: published tours with their destinations
     public function index()
     {
         return response()->json(
-            Tour::where('is_published', true)->latest()->get()
+            Tour::with('destination')
+                ->where('is_published', true)
+                ->latest()
+                ->get()
         );
     }
 
-    // Admin: all tours
+    // Admin: all tours with their destinations
     public function adminIndex()
     {
-        return response()->json(Tour::latest()->get());
+        return response()->json(
+            Tour::with('destination')->latest()->get()
+        );
     }
 
     // Admin: single tour
     public function adminShow(string $id)
     {
-        return response()->json(Tour::findOrFail($id));
+        return response()->json(
+            Tour::with('destination')->findOrFail($id)
+        );
     }
 
     // Public: single published tour
     public function show(string $slug)
     {
-        $tour = Tour::where('slug', $slug)
+        $tour = Tour::with('destination')
+            ->where('slug', $slug)
             ->where('is_published', true)
             ->firstOrFail();
 
@@ -43,6 +51,7 @@ class TourController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'destination_id' => 'nullable|exists:destinations,id',
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:tours,slug',
             'description' => 'required|string',
@@ -59,7 +68,6 @@ class TourController extends Controller
         ]);
 
         $galleryFiles = $request->file('gallery_images', []);
-
         unset($validated['gallery_images']);
 
         if ($request->hasFile('image')) {
@@ -70,15 +78,17 @@ class TourController extends Controller
         $validated['gallery_images'] = [];
 
         foreach ($galleryFiles as $file) {
-            $validated['gallery_images'][] = $file
-                ->store('tours/gallery', 'public');
+            $validated['gallery_images'][] = $file->store(
+                'tours/gallery',
+                'public'
+            );
         }
 
         $tour = Tour::create($validated);
 
         return response()->json([
             'message' => 'Tour created successfully.',
-            'tour' => $tour,
+            'tour' => $tour->load('destination'),
         ], 201);
     }
 
@@ -88,6 +98,7 @@ class TourController extends Controller
         $tour = Tour::findOrFail($id);
 
         $validated = $request->validate([
+            'destination_id' => 'sometimes|nullable|exists:destinations,id',
             'name' => 'sometimes|required|string|max:255',
             'slug' => 'sometimes|required|string|max:255|unique:tours,slug,' . $id,
             'description' => 'sometimes|required|string',
@@ -104,7 +115,6 @@ class TourController extends Controller
         ]);
 
         $galleryFiles = $request->file('gallery_images', []);
-
         unset($validated['gallery_images']);
 
         if ($request->hasFile('image')) {
@@ -119,8 +129,10 @@ class TourController extends Controller
         $galleryImages = $tour->gallery_images ?? [];
 
         foreach ($galleryFiles as $file) {
-            $galleryImages[] = $file
-                ->store('tours/gallery', 'public');
+            $galleryImages[] = $file->store(
+                'tours/gallery',
+                'public'
+            );
         }
 
         $validated['gallery_images'] = $galleryImages;
@@ -129,7 +141,7 @@ class TourController extends Controller
 
         return response()->json([
             'message' => 'Tour updated successfully.',
-            'tour' => $tour->fresh(),
+            'tour' => $tour->fresh()->load('destination'),
         ]);
     }
 
@@ -146,7 +158,7 @@ class TourController extends Controller
             'message' => $tour->is_published
                 ? 'Tour published successfully.'
                 : 'Tour unpublished successfully.',
-            'tour' => $tour,
+            'tour' => $tour->load('destination'),
         ]);
     }
 
