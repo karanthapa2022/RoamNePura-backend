@@ -7,6 +7,9 @@ use App\Models\Booking;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Notifications\AdminActivityNotification;
+use App\Mail\BookingStatusUpdated;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
 {
@@ -50,19 +53,42 @@ class BookingController extends Controller
     }
 
     // Update booking status from the admin panel.
-    public function updateStatus(Request $request, Booking $booking)
-    {
-        $validated = $request->validate([
-            'status' => ['required', 'in:pending,confirmed,cancelled'],
-        ]);
 
-        $booking->update([
-            'status' => $validated['status'],
-        ]);
+// Update booking status from the admin panel.
+public function updateStatus(Request $request, Booking $booking)
+{
+    $validated = $request->validate([
+        'status' => ['required', 'in:pending,confirmed,cancelled'],
+    ]);
 
-        return response()->json([
-            'message' => 'Booking status updated successfully.',
-            'booking' => $booking->fresh(),
-        ]);
+    $oldStatus = $booking->status;
+    $newStatus = $validated['status'];
+
+    // Update the booking status.
+    $booking->update([
+        'status' => $newStatus,
+    ]);
+
+    // Send an email only when changing to confirmed or cancelled.
+    if (
+        $oldStatus !== $newStatus &&
+        in_array($newStatus, ['confirmed', 'cancelled'])
+    ) {
+        try {
+            Mail::to($booking->email)
+                ->send(new BookingStatusUpdated($booking->fresh()));
+        } catch (\Throwable $e) {
+            Log::error('Booking status email failed.', [
+                'booking_id' => $booking->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
+
+    return response()->json([
+        'message' => 'Booking status updated successfully.',
+        'booking' => $booking->fresh(),
+    ]);
+}
+
 }
