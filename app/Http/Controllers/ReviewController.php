@@ -18,23 +18,36 @@ class ReviewController extends Controller
     }
 
     // Submit a customer review.
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
-            'tour' => ['required', 'string', 'max:255'],
-            'rating' => ['required', 'integer', 'min:1', 'max:5'],
-            'comment' => ['required', 'string', 'max:5000'],
-        ]);
 
-        $review = Review::create($validated);
+public function store(Request $request)
+{
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:255'],
+        'email' => ['required', 'email', 'max:255'],
+        'tour' => ['required', 'string', 'max:255'],
+        'rating' => ['required', 'integer', 'min:1', 'max:5'],
+        'comment' => ['required', 'string', 'max:5000'],
+        'website' => ['nullable', 'string', 'max:255'],
+    ]);
 
+    // Silently ignore submissions caught by the honeypot.
+    if (!empty($validated['website'])) {
         return response()->json([
             'message' => 'Review submitted successfully. It is awaiting approval.',
-            'review' => $review,
         ], 201);
     }
+
+    // Do not store the honeypot field in the database.
+    unset($validated['website']);
+
+    $review = Review::create($validated);
+
+    return response()->json([
+        'message' => 'Review submitted successfully. It is awaiting approval.',
+        'review' => $review,
+    ], 201);
+}
+
 
     // Show all reviews in the admin panel.
     public function adminIndex()

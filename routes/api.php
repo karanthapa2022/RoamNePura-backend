@@ -31,7 +31,8 @@ Route::post('/inquiries', [InquiryController::class, 'store']);
 
 // Public reviews
 Route::get('/reviews', [ReviewController::class, 'index']);
-Route::post('/reviews', [ReviewController::class, 'store']);
+Route::post('/reviews', [ReviewController::class, 'store'])
+    ->middleware('throttle:5,1');
 
 Route::get('/site-settings', [SiteSettingController::class, 'show']);
 
