@@ -11,8 +11,21 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\Api\SiteSettingController;
 use App\Http\Controllers\Api\AdminNotificationController;
 
-// Admin login
+
+// Admin authentication
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
+
+// Admin password recovery
+Route::post('/admin/forgot-password', [
+    AdminAuthController::class,
+    'sendPasswordResetLink',
+])->middleware('throttle:5,1');
+
+Route::post('/admin/reset-password', [
+    AdminAuthController::class,
+    'resetPassword',
+])->middleware('throttle:5,1');
+
 
 
 // Public booking

@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 class AdminAuthController extends Controller
 {
@@ -49,6 +51,75 @@ $token = $newToken->plainTextToken;
             ],
         ]);
     }
+
+public function sendPasswordResetLink(Request $request)
+{
+    $validated = $request->validate([
+        'email' => ['required', 'email'],
+    ]);
+
+    $user = User::where('email', $validated['email'])
+        ->where('is_admin', true)
+        ->first();
+
+    if ($user) {
+        Password::sendResetLink([
+            'email' => $user->email,
+        ]);
+    }
+
+    return response()->json([
+        'message' => 'If an admin account exists for that email, a password reset link has been sent.',
+    ]);
+}
+
+public function resetPassword(Request $request)
+{
+    $validated = $request->validate([
+        'email' => ['required', 'email'],
+        'token' => ['required', 'string'],
+        'password' => [
+            'required',
+            'string',
+            'min:8',
+            'confirmed',
+        ],
+    ]);
+
+    $user = User::where('email', $validated['email'])
+        ->where('is_admin', true)
+        ->first();
+
+    if (!$user) {
+        return response()->json([
+            'message' => 'This password reset link is invalid or has expired.',
+        ], 422);
+    }
+
+    $status = Password::reset(
+        $validated,
+        function (User $user, string $password) {
+            $user->forceFill([
+                'password' => $password,
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            // Revoke all existing admin login tokens.
+            $user->tokens()->delete();
+        }
+    );
+
+    if ($status !== Password::PASSWORD_RESET) {
+        return response()->json([
+            'message' => 'This password reset link is invalid or has expired. Please request a new one.',
+        ], 422);
+    }
+
+    return response()->json([
+        'message' => 'Your admin password has been reset successfully. Please log in with your new password.',
+    ]);
+}
+
     public function logout(Request $request)
 {
     $request->user()->currentAccessToken()?->delete();
