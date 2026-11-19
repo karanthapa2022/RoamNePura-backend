@@ -19,11 +19,10 @@ class AdminInactivityTimeout
             ], 401);
         }
 
+        $lastActivity = $token->last_activity_at ?? $token->created_at ?? now();
+
         // Check whether the admin has been inactive for 30 minutes.
-        if (
-            !$token->last_activity_at ||
-            Carbon::parse($token->last_activity_at)->lt(now()->subMinutes(30))
-        ) {
+        if (Carbon::parse($lastActivity)->lt(now()->subMinutes(30))) {
             $token->delete();
 
             return response()->json([

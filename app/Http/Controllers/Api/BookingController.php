@@ -27,6 +27,7 @@ class BookingController extends Controller
         ]);
 
         // Status defaults to pending in the database.
+        $validated['status'] = 'pending';
         $booking = Booking::create($validated);
         User::where('is_admin', true)->each(function ($admin) use ($booking) {
     $admin->notify(new AdminActivityNotification([
