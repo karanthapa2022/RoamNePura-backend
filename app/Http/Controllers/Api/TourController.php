@@ -92,58 +92,80 @@ class TourController extends Controller
         ], 201);
     }
 
-    // Update tour
-    public function update(Request $request, string $id)
-    {
-        $tour = Tour::findOrFail($id);
 
-        $validated = $request->validate([
-            'destination_id' => 'sometimes|nullable|exists:destinations,id',
-            'name' => 'sometimes|required|string|max:255',
-            'slug' => 'sometimes|required|string|max:255|unique:tours,slug,' . $id,
-            'description' => 'sometimes|required|string',
-            'duration' => 'sometimes|required|string|max:255',
-            'difficulty' => 'sometimes|required|string|max:255',
-            'price' => 'sometimes|required|numeric|min:0',
-            'category' => 'nullable|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'highlights' => 'nullable|string',
-            'itinerary' => 'nullable|array',
-            'gallery_images' => 'nullable|array',
-            'gallery_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:2048',
-            'is_published' => 'sometimes|boolean',
-        ]);
+// Update tour
+public function update(Request $request, string $id)
+{
+    $tour = Tour::findOrFail($id);
 
-        $galleryFiles = $request->file('gallery_images', []);
-        unset($validated['gallery_images']);
+    $validated = $request->validate([
+        'destination_id' => 'sometimes|nullable|exists:destinations,id',
+        'name' => 'sometimes|required|string|max:255',
+        'slug' => 'sometimes|required|string|max:255|unique:tours,slug,' . $id,
+        'description' => 'sometimes|required|string',
+        'duration' => 'sometimes|required|string|max:255',
+        'difficulty' => 'sometimes|required|string|max:255',
+        'price' => 'sometimes|required|numeric|min:0',
+        'category' => 'nullable|string|max:255',
+        'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+        'highlights' => 'nullable|string',
+        'itinerary' => 'nullable|array',
+        'gallery_images' => 'nullable|array',
+        'gallery_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:2048',
+        '_remove_gallery' => 'sometimes|array',
+        '_remove_gallery.*' => 'string',
+        'is_published' => 'sometimes|boolean',
+    ]);
 
-        if ($request->hasFile('image')) {
-            if ($tour->image) {
-                Storage::disk('public')->delete($tour->image);
-            }
+    // Get requested gallery removals and new uploads.
+    $imagesToRemove = $validated['_remove_gallery'] ?? [];
+    unset($validated['_remove_gallery']);
 
-            $validated['image'] = $request->file('image')
-                ->store('tours', 'public');
+    $galleryFiles = $request->file('gallery_images', []);
+    unset($validated['gallery_images']);
+
+    // Replace cover image if a new one was uploaded.
+    if ($request->hasFile('image')) {
+        if ($tour->image) {
+            Storage::disk('public')->delete($tour->image);
         }
 
-        $galleryImages = $tour->gallery_images ?? [];
-
-        foreach ($galleryFiles as $file) {
-            $galleryImages[] = $file->store(
-                'tours/gallery',
-                'public'
-            );
-        }
-
-        $validated['gallery_images'] = $galleryImages;
-
-        $tour->update($validated);
-
-        return response()->json([
-            'message' => 'Tour updated successfully.',
-            'tour' => $tour->fresh()->load('destination'),
-        ]);
+        $validated['image'] = $request->file('image')
+            ->store('tours', 'public');
     }
+
+    // Remove only images that belong to this tour.
+    $galleryImages = $tour->gallery_images ?? [];
+
+    foreach ($imagesToRemove as $image) {
+        if (in_array($image, $galleryImages, true)) {
+            Storage::disk('public')->delete($image);
+        }
+    }
+
+    $galleryImages = array_values(array_filter(
+        $galleryImages,
+        fn ($image) => !in_array($image, $imagesToRemove, true)
+    ));
+
+    // Add newly uploaded gallery images.
+    foreach ($galleryFiles as $file) {
+        $galleryImages[] = $file->store(
+            'tours/gallery',
+            'public'
+        );
+    }
+
+    $validated['gallery_images'] = $galleryImages;
+
+    $tour->update($validated);
+
+    return response()->json([
+        'message' => 'Tour updated successfully.',
+        'tour' => $tour->fresh()->load('destination'),
+    ]);
+}
+
 
     // Publish / unpublish
     public function togglePublish(string $id)

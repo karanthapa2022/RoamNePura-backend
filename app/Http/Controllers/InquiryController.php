@@ -45,6 +45,7 @@ class InquiryController extends Controller
         return response()->json($inquiries);
     }
 
+
 public function updateStatus(Request $request, Inquiry $inquiry)
 {
     $validated = $request->validate([
@@ -54,6 +55,20 @@ public function updateStatus(Request $request, Inquiry $inquiry)
     $inquiry->update([
         'status' => $validated['status'],
     ]);
+
+    // Mark matching inquiry notifications as read.
+    if (in_array($validated['status'], ['read', 'replied'], true)) {
+        $admins = User::where('is_admin', true)->get();
+
+        foreach ($admins as $admin) {
+            $admin->unreadNotifications()
+                ->where('data->type', 'inquiry')
+                ->where('data->inquiry_id', $inquiry->id)
+                ->update([
+                    'read_at' => now(),
+                ]);
+        }
+    }
 
     return response()->json([
         'message' => 'Inquiry status updated successfully.',
